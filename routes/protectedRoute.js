@@ -1,5 +1,3 @@
-// C:\express\osmium_blog_backend\osmium_blog_express_application\routes\protectedRoute.js
-
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 

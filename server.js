@@ -12,30 +12,15 @@ import connectDB from "./config/db.js";
 // Routes
 import authRoutes from "./routes/authRoute.js";
 import protectedRoutes from "./routes/protectedRoute.js";
-import blogRoutes from "./routes/blogRoute.js";
-import hiringRoutes from "./routes/hiringRoute.js";
+import paymentRoutes from "./routes/paymentRoute.js";
+import productRoutes from "./routes/productRoute.js";
+import adminRoutes from "./routes/adminRoute.js";
+import cartRoutes from "./routes/cartRoute.js";
 
 dotenv.config();
 
 // Connect to MongoDB
-connectDB().then(async () => {
-  try {
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    const blogCollection = collections.find((c) => c.name === "blogs");
-
-    if (blogCollection) {
-      await mongoose.connection.db.collection("blogs").dropIndex("slug_1");
-      console.log("✅ Dropped slug_1 index from blogs collection");
-    }
-  } catch (err) {
-    if (err.codeName === "IndexNotFound") {
-      console.log("ℹ️ slug_1 index not found (already removed)");
-    } else {
-      console.error("❌ Error dropping slug_1 index:", err.message);
-    }
-  }
-});
-
+connectDB();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -71,6 +56,8 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 // Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Payment routes
+app.use("/api/payments", paymentRoutes);
 
 // Test route
 app.get("/", (req, res) => {
@@ -101,11 +88,18 @@ app.post("/api/test-mail", async (req, res) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/blogs", blogRoutes);
-app.use("/api/hirings", hiringRoutes);
+
+
+app.use("/api/products", productRoutes);
 
 // Protected routes
 app.use("/api", protectedRoutes);
+
+// Admin routes
+app.use("/api/admin", adminRoutes);
+
+// Cart routes
+app.use("/api/cart", cartRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

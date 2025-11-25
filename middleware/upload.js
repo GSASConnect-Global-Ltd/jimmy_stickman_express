@@ -17,7 +17,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const filename = `blog-${Date.now()}${ext}`;
+    const filename = `product-${Date.now()}${ext}`;
     console.log(`📝 Renaming file: ${file.originalname} -> ${filename}`);
     cb(null, filename);
   },
@@ -37,4 +37,4 @@ const fileFilter = (req, file, cb) => {
 // Allow up to 3 images
 const upload = multer({ storage, fileFilter });
 
-export const uploadBlogImages = upload.array("images", 3);
+export const uploadProductImages = upload.array("images", 3);
