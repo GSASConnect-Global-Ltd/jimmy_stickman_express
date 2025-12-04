@@ -20,7 +20,7 @@ const generateRefreshToken = (userId) => {
 // @route   POST /api/auth/register
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -30,9 +30,9 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await User.create({ name, email, password: hashedPassword });
+    const user = await User.create({ name, email, password: hashedPassword, role: role || "user" });
 
-    res.status(201).json({ message: "User registered successfully", user: { id: user._id, name, email } });
+    res.status(201).json({ message: "User registered successfully", user: { id: user._id, name, email, role } });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -54,22 +54,94 @@ export const login = async (req, res) => {
     const refreshToken = generateRefreshToken(user._id);
 
     console.log(`✅ User ${user.email} logged in`);
-    console.log("👉 Access Token issued (expires in 30m):", accessToken);
-    console.log("👉 Refresh Token issued (expires in 7d):", refreshToken);
 
-    res.cookie("refreshToken", refreshToken, {
+    // -----------------------------
+    //  SET ACCESS TOKEN (HTTP-ONLY)
+    // -----------------------------
+    res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      // secure: process.env.NODE_ENV === "production",
+      secure: false,
+      sameSite: "Lax",        // important for cross-domain Next.js local frontend
+      maxAge: 30 * 60 * 1000,  // 30 minutes
     });
 
-    res.json({ accessToken });
+    // -----------------------------
+    //  SET REFRESH TOKEN (HTTP-ONLY)
+    // -----------------------------
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      // secure: process.env.NODE_ENV === "production",
+      secure: false,
+      sameSite: "Lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+
+
+
+    // debug
+
+    console.log("===== DEBUG: LOGIN ROUTE =====");
+console.log("Incoming email:", email);
+console.log("User found:", !!user);
+console.log("AccessToken preview:", accessToken.substring(0, 20) + "...");
+console.log("RefreshToken preview:", refreshToken.substring(0, 20) + "...");
+
+console.log("Setting cookies:");
+console.log("accessToken cookie:", {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "None",
+  maxAge: 30 * 60 * 1000,
+});
+console.log("refreshToken cookie:", {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "None",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
+res.on("finish", () => {
+  console.log("🚀 DEBUG: Response delivered to FE");
+  console.log("===============================");
+});
+
+
+    // -----------------------------
+    //  SEND RESPONSE
+    // -----------------------------
+
+
+
+
+//     res.json({
+//       message: "Login successful",
+//       accessToken, // optional, for debugging
+//     });
+
+//     console.log("TOKEN SENT TO FRONTEND:", token);
+// return res.json({
+//   message: "Login successful",
+//   token,
+// });
+
+res.json({
+  message: "Login successful",
+  token: accessToken,  // rename so frontend matches
+});
+
+// debug
+console.log("TOKEN SENT TO FRONTEND:", accessToken);
+
+
+
   } catch (error) {
     console.error("❌ Login error:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 
 // @desc    Refresh Access Token

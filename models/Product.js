@@ -1,23 +1,54 @@
 import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema({
-    name: { type: String, required: true  },
-    price: { type: Number, required: true,  },
-    images:{
-        type: [String],
-        default:[null, null, null],
-        validate: {
-        validator: function (v) {
-          return v.length === 3;
-        },
-        message: "Images array must always have length 3",
-      },
-    },
-    description: String,
-    inStock: { type: Boolean, default: true },
-    createdAt: { type: Date, default: Date.now },
+    name: { type: String, required: true },
+    
+    description: { type: String },
 
-})
+    price: { type: Number, required: true },
+
+    brand: { type: String },
+
+    material: { type: String },
+
+    gender: {
+        type: String,
+        enum: ["Male", "Female", "Unisex"],
+        default: "Unisex"
+    },
+
+    sizes: {
+        type: [String],
+        default: []    // e.g ["S","M","L"]
+    },
+
+    stockBySize: [
+        {
+            size: { type: String },
+            quantity: { type: Number, default: 0 }
+        }
+    ],
+
+    colors: {
+        type: [String],
+        default: []    // e.g ["Black","Blue"]
+    },
+
+    sku: { type: String, unique: true },
+
+    images: {
+        type: [String],
+        default: [null, null, null],
+        validate: {
+            validator: (v) => v.length === 3,
+            message: "Images array must always have length 3",
+        },
+    },
+
+    inStock: { type: Boolean, default: true },
+
+    createdAt: { type: Date, default: Date.now }
+});
 
 const Product = mongoose.model("Product", productSchema);
-export default Product
+export default Product;

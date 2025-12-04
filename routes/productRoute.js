@@ -1,32 +1,28 @@
-import express from 'express';
+import express from "express";
 import {
-    createProduct,
-    getProducts,
-    getProductById,
-    updateProduct,
-    searchProducts,
-    deleteProduct
-} from '../controllers/productController.js';
+  createProduct,
+  getProducts,
+  getProductById,
+  updateProduct,
+  deleteProduct,
+  searchProducts,
+  deleteMultipleProducts, 
+  filterProducts
+} from "../controllers/productController.js";
+
 import { uploadProductImages } from "../middleware/upload.js";
 
 const router = express.Router();
 
-// 1️⃣ Search products (use query params)
-router.get('/search', searchProducts);
+// ⬇ APPLY MULTER MIDDLEWARE HERE
+router.post("/", uploadProductImages, createProduct);
 
-// 2️⃣ Get all products
-router.get('/', getProducts);
-
-// 3️⃣ Get single product by ID
-router.get('/:id', getProductById);
-
-// 4️⃣ Create product (with up to 3 images)
-router.post('/', uploadProductImages, createProduct);
-
-// 5️⃣ Update product by ID (with up to 3 images)
-router.put('/:id', uploadProductImages, updateProduct);
-
-// 6️⃣ Delete product by ID
-router.delete('/:id', deleteProduct);
+router.get("/", getProducts);
+router.get("/search", searchProducts);
+router.get("/filter", filterProducts);
+router.get("/:id", getProductById);
+router.put("/:id", uploadProductImages, updateProduct);
+router.delete("/:id", deleteProduct);
+router.delete("/batch/delete", deleteMultipleProducts);
 
 export default router;
