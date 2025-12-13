@@ -1,3 +1,4 @@
+// C:\express\jimmy_stickman_express\routes\protectedRoute.js
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
 

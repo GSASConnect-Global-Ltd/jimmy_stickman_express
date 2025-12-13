@@ -16,6 +16,7 @@ import paymentRoutes from "./routes/paymentRoute.js";
 import productRoutes from "./routes/productRoute.js";
 import adminRoutes from "./routes/adminRoute.js";
 import cartRoutes from "./routes/cartRoute.js";
+import wishlistRoutes from "./routes/wishlistRoute.js";
 
 dotenv.config();
 
@@ -100,6 +101,9 @@ app.use("/api/admin", adminRoutes);
 
 // Cart routes
 app.use("/api/cart", cartRoutes);
+
+//wishlist routes
+app.use("/api/wishlist", wishlistRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

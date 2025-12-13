@@ -29,11 +29,15 @@ const productSchema = new mongoose.Schema({
         }
     ],
 
-    colors: {
-        type: [String],
-        default: []    // e.g ["Black","Blue"]
+     colors: {
+        type: [
+            {
+                name: { type: String, required: true },
+                value: { type: String, required: true } // Hex code or CSS color
+            }
+        ],
+        default: []
     },
-
     sku: { type: String, unique: true },
 
     images: {

@@ -1,45 +1,51 @@
-//C:\express\osmium_blog_backend\osmium_blog_express_application\controllers\authController.js
+// C:\express\osmium_blog_backend\osmium_blog_express_application\controllers\authController.js
 
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
-// Helper: Generate Access Token
+// Generate Access Token
 const generateAccessToken = (userId) => {
-  console.log("Signing token with JWT_SECRET:", JSON.stringify(process.env.JWT_SECRET));
-
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "30m" });
 };
 
-// Helper: Generate Refresh Token
+// Generate Refresh Token
 const generateRefreshToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
 };
 
-// @desc    Register User
-// @route   POST /api/auth/register
+// ==========================
+// REGISTER
+// ==========================
 export const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    const user = await User.create({ name, email, password: hashedPassword, role: role || "user" });
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: role || "user"
+    });
 
-    res.status(201).json({ message: "User registered successfully", user: { id: user._id, name, email, role } });
+    res.status(201).json({
+      message: "User registered successfully",
+      user: { id: user._id, name, email, role }
+    });
+
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// @desc    Login User
-// @route   POST /api/auth/login
+// ==========================
+// LOGIN
+// ==========================
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -53,128 +59,80 @@ export const login = async (req, res) => {
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
-    console.log(`✅ User ${user.email} logged in`);
+    console.log(`✅ User logged in: ${email}`);
 
-    // -----------------------------
-    //  SET ACCESS TOKEN (HTTP-ONLY)
-    // -----------------------------
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      // secure: process.env.NODE_ENV === "production",
-      secure: false,
-      sameSite: "Lax",        // important for cross-domain Next.js local frontend
-      maxAge: 30 * 60 * 1000,  // 30 minutes
-    });
-
-    // -----------------------------
-    //  SET REFRESH TOKEN (HTTP-ONLY)
-    // -----------------------------
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      // secure: process.env.NODE_ENV === "production",
-      secure: false,
-      sameSite: "Lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-
-
-
-    // debug
-
-    console.log("===== DEBUG: LOGIN ROUTE =====");
-console.log("Incoming email:", email);
-console.log("User found:", !!user);
-console.log("AccessToken preview:", accessToken.substring(0, 20) + "...");
-console.log("RefreshToken preview:", refreshToken.substring(0, 20) + "...");
-
-console.log("Setting cookies:");
-console.log("accessToken cookie:", {
+    // Correct cookie settings for localhost
+    const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "None",
+  secure: false,        // true only in production HTTPS
+  sameSite: "lax",
+  path: "/",
+};
+
+res.cookie("access_token", accessToken, {
+  ...cookieOptions,
   maxAge: 30 * 60 * 1000,
 });
-console.log("refreshToken cookie:", {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "None",
+
+res.cookie("refresh_token", refreshToken, {
+  ...cookieOptions,
   maxAge: 7 * 24 * 60 * 60 * 1000,
 });
 
-res.on("finish", () => {
-  console.log("🚀 DEBUG: Response delivered to FE");
-  console.log("===============================");
-});
-
-
-    // -----------------------------
-    //  SEND RESPONSE
-    // -----------------------------
-
-
-
-
-//     res.json({
-//       message: "Login successful",
-//       accessToken, // optional, for debugging
-//     });
-
-//     console.log("TOKEN SENT TO FRONTEND:", token);
-// return res.json({
-//   message: "Login successful",
-//   token,
-// });
-
-res.json({
-  message: "Login successful",
-  token: accessToken,  // rename so frontend matches
-});
-
-// debug
-console.log("TOKEN SENT TO FRONTEND:", accessToken);
-
+res.json({ message: "Login successful" });
 
 
   } catch (error) {
-    console.error("❌ Login error:", error.message);
+    console.error("❌ Login error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-
-
-// @desc    Refresh Access Token
-// @route   POST /api/auth/refresh
+// ==========================
+// REFRESH TOKEN
+// ==========================
 export const refresh = (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies.refresh_token; // ✅ FIXED
 
   if (!refreshToken) {
-    console.warn("⚠️ No refresh token provided");
     return res.status(401).json({ message: "No refresh token provided" });
   }
 
   jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
     if (err) {
-      console.warn("❌ Invalid or expired refresh token");
       return res.status(403).json({ message: "Invalid or expired refresh token" });
     }
 
     const newAccessToken = generateAccessToken(decoded.id);
-    console.log(`🔄 Refresh token valid. New access token issued for userId=${decoded.id}`);
-    res.json({ accessToken: newAccessToken });
+
+    // OPTIONAL but recommended: set new access token cookie
+    res.cookie("access_token", newAccessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 60 * 1000,
+    });
+
+    return res.json({ message: "Token refreshed" });
   });
 };
 
 
-// @desc    Logout User
-// @route   POST /api/auth/logout
+// ==========================
+// LOGOUT
+// ==========================
 export const logout = (req, res) => {
-  console.log("👋 User logged out, clearing refresh token cookie");
-  res.clearCookie("refreshToken", {
+  const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict"
-  });
-  res.json({ message: "Logged out successfully" });
+    secure: false,     // same as login
+    sameSite: "Lax",
+    path: "/",         // 🔥 FIXED — this was missing!
+  };
+
+  res.clearCookie("access_token", cookieOptions);
+  res.clearCookie("refresh_token", cookieOptions);
+
+  return res.json({ message: "Logged out successfully" });
 };
+

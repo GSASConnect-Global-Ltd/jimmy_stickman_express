@@ -1,55 +1,64 @@
 import Product from '../models/Product.js';
 
-// -------------------- CREATE PRODUCT --------------------
-export const createProduct = async (req, res) => {
-    try {
-        const {
-            name,
-            description,
-            price,
-            brand,
-            material,
-            gender,
-            sizes,
-            colors,
-            sku,
-            stockBySize
-        } = req.body;
-
-        const uploadedImages = req.files
-            ? req.files.map((file) => `/uploads/${file.filename}`)
-            : [];
-
-        const images = [
-            uploadedImages[0] || null,
-            uploadedImages[1] || null,
-            uploadedImages[2] || null,
-        ];
-
-        const product = new Product({
-            name,
-            description,
-            price,
-            brand,
-            material,
-            gender,
-            colors: JSON.parse(colors || "[]"),
-            sizes: JSON.parse(sizes || "[]"),
-            stockBySize: JSON.parse(stockBySize || "[]"),
-            sku,
-            images,
-        });
-
-        await product.save();
-
-        res.status(201).json({ message: "Product created successfully", product });
-
-    } catch (error) {
-        console.error("Product creation error:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
+// Helper to safely format colors array
+const formatColors = (colors) => {
+  if (!Array.isArray(colors)) return [];
+  return colors.map(c => ({
+    name: c.name || "",
+    value: c.value || "#000000",
+  }));
 };
 
+
+// -------------------- CREATE PRODUCT --------------------
+export const createProduct = async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      price,
+      brand,
+      material,
+      gender,
+      sizes,
+      colors,
+      sku,
+      stockBySize
+    } = req.body;
+
+    const uploadedImages = req.files
+      ? req.files.map((file) => `/uploads/${file.filename}`)
+      : [];
+
+    const images = [
+      uploadedImages[0] || null,
+      uploadedImages[1] || null,
+      uploadedImages[2] || null,
+    ];
+
+    const product = new Product({
+      name,
+      description,
+      price,
+      brand,
+      material,
+      gender,
+      colors: colors ? JSON.parse(colors) : [], // <-- just parse the JSON
+      sizes: sizes ? JSON.parse(sizes) : [],
+      stockBySize: stockBySize ? JSON.parse(stockBySize) : [],
+      sku,
+      images,
+    });
+
+    await product.save();
+
+    res.status(201).json({ message: "Product created successfully", product });
+
+  } catch (error) {
+    console.error("Product creation error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 // -------------------- GET ALL PRODUCTS --------------------
 export const getProducts = async (req, res) => {
     try{
@@ -108,7 +117,7 @@ export const updateProduct = async (req, res) => {
         if (material) product.material = material;
         if (gender) product.gender = gender;
         if (sizes) product.sizes = JSON.parse(sizes);
-        if (colors) product.colors = JSON.parse(colors);
+        if (colors) product.colors = formatColors(JSON.parse(colors));
         if (sku) product.sku = sku;
         if (stockBySize) product.stockBySize = JSON.parse(stockBySize);
 
