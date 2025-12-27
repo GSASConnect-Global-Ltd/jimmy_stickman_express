@@ -1,14 +1,28 @@
-//C:\express\osmium_blog_backend\osmium_blog_express_application\routes\authRoute.js
-// authRoute.js
 import express from "express";
-import { register, login, refresh, logout } from "../controllers/authController.js";
+import { register, login, getUser, logout } from "../controllers/authController.js";
+
+console.log("✅ authRoute loaded");
 
 const router = express.Router();
 
+router.use((req, res, next) => {
+  console.log("🔐 AUTH ROUTE HIT:", req.method, req.originalUrl);
+  next();
+});
+
 router.post("/register", register);
 router.post("/login", login);
-router.post("/refresh", refresh);   
-router.post("/logout", logout);  
+router.get("/user", getUser);
+router.post("/logout", logout);
+router.get("/test", (req, res) => {
+  console.log("🧪 AUTH TEST ROUTE HIT");
+  console.log("Headers:", req.headers);
+  console.log("Cookies:", req.cookies);
+
+  res.json({
+    message: "Auth test route working",
+    time: new Date().toISOString(),
+  });
+});
 
 export default router;
-

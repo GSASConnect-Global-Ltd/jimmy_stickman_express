@@ -1,12 +1,12 @@
 // models/Wishlist.js
 import mongoose from "mongoose";
-
 const wishlistSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      unique: true,
     },
     products: [
       {
@@ -16,8 +16,8 @@ const wishlistSchema = new mongoose.Schema(
           required: true,
         },
         variant: {
-          size: { type: String },
-          color: { type: String },
+          size: String,
+          color: String,
         },
         addedAt: { type: Date, default: Date.now },
       },
@@ -25,5 +25,4 @@ const wishlistSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 export default mongoose.model("Wishlist", wishlistSchema);

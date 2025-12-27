@@ -5,11 +5,11 @@ import {
   removeFromWishlist,
   clearWishlist,
 } from "../controllers/wishlistController.js";
-// import authMiddleware from "../middleware/authMiddleware.js"; // default import
+import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// router.use(authMiddleware); // all routes require authentication
+router.use(authMiddleware); // 🔐 REQUIRED
 
 router.get("/", getWishlist);
 router.post("/add", addToWishlist);
