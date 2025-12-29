@@ -74,7 +74,7 @@ export const login = async (req, res) => {
 // ==========================
 // GET USER (protected)
 // ==========================
-export const getUser = async (req, res) => {
+export const getUser = async (req, res) => { 
   try {
     const token = req.cookies.jwt;
     if (!token) return res.status(401).json({ message: "Unauthenticated" });
