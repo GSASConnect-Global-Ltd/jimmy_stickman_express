@@ -37,18 +37,19 @@ export const createProduct = async (req, res) => {
     ];
 
     const product = new Product({
-      name,
-      description,
-      price,
-      brand,
-      material,
-      gender,
-      colors: colors ? JSON.parse(colors) : [], // <-- just parse the JSON
-      sizes: sizes ? JSON.parse(sizes) : [],
-      stockBySize: stockBySize ? JSON.parse(stockBySize) : [],
-      sku,
-      images,
-    });
+        name,
+        description,
+        price,
+        brand,
+        material,
+        gender,
+        colors: colors ? formatColors(JSON.parse(colors)) : [],
+        sizes: sizes ? JSON.parse(sizes) : [],
+        stockBySize: stockBySize ? JSON.parse(stockBySize) : [],
+        sku,
+        images,
+        });
+
 
     await product.save();
 

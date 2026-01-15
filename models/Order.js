@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const orderSchema = new mongoose.Schema({
   userId: String,
   email: String,
+
   items: [
     {
       productId: String,
@@ -12,11 +13,37 @@ const orderSchema = new mongoose.Schema({
       image: String,
     }
   ],
+
   amount: Number,
+  amountInKobo: Number,
 
   status: {
     type: String,
-    default: "pending", // pending | paid | cancelled
+    enum: [
+      "pending",
+      "paid",
+      "processing",
+      "shipped",
+      "in_transit",
+      "delivered",
+      "cancelled"
+    ],
+    default: "pending",
+  },
+
+  tracking: {
+    trackingNumber: String,
+    courier: String, // DHL, FedEx, GIG, etc
+    trackingUrl: String,
+    shippedAt: Date,
+    deliveredAt: Date,
+    history: [
+      {
+        status: String,
+        message: String,
+        date: { type: Date, default: Date.now },
+      }
+    ]
   },
 
   virtualAccount: {
@@ -30,5 +57,6 @@ const orderSchema = new mongoose.Schema({
   paymentReference: String,
   createdAt: { type: Date, default: Date.now }
 });
+
 
 export default mongoose.model("Order", orderSchema);
