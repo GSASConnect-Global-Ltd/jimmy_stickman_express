@@ -158,25 +158,23 @@ export const deleteProduct = async (req, res) => {
 };
 
 
-// -------------------- SEARCH PRODUCTS --------------------
 
+
+// -------------------- SEARCH PRODUCTS (LIVE) --------------------
 export const searchProducts = async (req, res) => {
-    try {
-        const { name, category, minPrice, maxPrice } = req.query;
-        let filter = {};
+  try {
+    const { name } = req.query;
+    if (!name) return res.json([]); // no query, return empty array
 
-        if (name) filter.name = { $regex: name, $options: 'i' };
-        if (category) filter.category = category;
-        if (minPrice || maxPrice) filter.price = {};
-        if (minPrice) filter.price.$gte = Number(minPrice);
-        if (maxPrice) filter.price.$lte = Number(maxPrice);
+    const products = await Product.find({
+      name: { $regex: name, $options: "i" },
+    }).limit(5); // limit to 5 suggestions for speed
 
-        const products = await Product.find(filter).sort({ created_at: -1 });
-        res.json(products);
-    } catch (error) {
-        console.error("Error searching products:", error.message);
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
+    res.json(products);
+  } catch (error) {
+    console.error("Error searching products:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
 
 // -------------------- DELETE MULTIPLE PRODUCTS --------------------
@@ -200,68 +198,58 @@ export const deleteMultipleProducts = async (req, res) => {
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
-
 export const filterProducts = async (req, res) => {
-    try {
-        const {
-            name,
-            brand,
-            material,
-            gender,
-            minPrice,
-            maxPrice,
-            colors,
-            sizes,
-            sku,
-            inStock,
-        } = req.query;
+  try {
+    const {
+      name,
+      brand,
+      material,
+      category,
+      gender,
+      minPrice,
+      maxPrice,
+      colors,
+      sizes,
+      sku,
+      inStock,
+    } = req.query;
 
-        let filter = {};
+    let filter = {};
 
-        // Text search (case-insensitive)
-        if (name) filter.name = { $regex: name, $options: "i" };
-        if (brand) filter.brand = { $regex: brand, $options: "i" };
-        if (material) filter.material = { $regex: material, $options: "i" };
-        if (sku) filter.sku = { $regex: sku, $options: "i" };
+    if (name) filter.name = { $regex: name, $options: "i" };
+    if (brand) filter.brand = { $regex: brand, $options: "i" };
+    if (material) filter.material = { $regex: material, $options: "i" };
+    if (category) filter.material = { $regex: category, $options: "i" }; // map category to material or add proper field
+    if (sku) filter.sku = { $regex: sku, $options: "i" };
+    if (gender) filter.gender = gender;
 
-        // Exact match
-        if (gender) filter.gender = gender;
-
-        // Price Range
-        if (minPrice || maxPrice) {
-            filter.price = {};
-            if (minPrice) filter.price.$gte = Number(minPrice);
-            if (maxPrice) filter.price.$lte = Number(maxPrice);
-        }
-
-        // Colors (array match — user can pass multiple)
-        if (colors) {
-            const colorList = colors.split(",").map(c => c.trim());
-            filter.colors = { $in: colorList };
-        }
-
-        // Sizes (multi-select)
-        if (sizes) {
-            const sizeList = sizes.split(",").map(s => s.trim());
-            filter.sizes = { $in: sizeList };
-        }
-
-        // Stock level (dynamic)
-        if (inStock === "true") {
-            filter["stockBySize.quantity"] = { $gt: 0 };
-        }
-
-        const products = await Product.find(filter).sort({ created_at: -1 });
-
-        res.json({
-            count: products.length,
-            products,
-        });
-
-    } catch (error) {
-        console.error("Dynamic filter error:", error.message);
-        res.status(500).json({ message: "Server error", error: error.message });
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = Number(minPrice);
+      if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
+
+    if (colors) {
+      const colorList = colors.split(",").map(c => c.trim());
+      filter["colors.name"] = { $in: colorList }; // ✅ match nested object field
+    }
+
+    if (sizes) {
+      const sizeList = sizes.split(",").map(s => s.trim());
+      filter.sizes = { $in: sizeList };
+    }
+
+    if (inStock === "true") {
+      filter["stockBySize.quantity"] = { $gt: 0 };
+    }
+
+    const products = await Product.find(filter).sort({ created_at: -1 });
+    res.json({ count: products.length, products });
+
+  } catch (error) {
+    console.error("Dynamic filter error:", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };
 
 
