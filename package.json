@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js",
-    "build:dev": "tsc --project tsconfig.dev.json",
-    "build:prod": "tsc --project tsconfig.prod.json"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
