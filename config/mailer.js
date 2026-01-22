@@ -25,14 +25,15 @@ transporter.use(
   "compile",
   hbs({
     viewEngine: {
-      extname: ".hbs",
+      extName: ".hbs", // ✅ MUST be extName
       layoutsDir: path.join(__dirname, "../views/email/layouts"),
       defaultLayout: false,
       partialsDir: path.join(__dirname, "../views/email/partials"),
     },
     viewPath: path.join(__dirname, "../views/email"),
-    extName: ".hbs",
+    extName: ".hbs", // ✅ MUST be extName
   })
 );
+
 
 export default transporter;

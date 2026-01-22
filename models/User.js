@@ -1,31 +1,43 @@
-// C:\express\osmium_blog_backend\osmium_blog_express_application\models\User.js
-
+// models/User.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Name is required"],
+      required: true,
       trim: true,
     },
     email: {
       type: String,
-      required: [true, "Email is required"],
+      required: true,
       unique: true,
       lowercase: true,
       trim: true,
     },
+
     password: {
       type: String,
-      required: [true, "Password is required"],
       minlength: 6,
+      select: false, // hide by default
     },
-    role:{
+
+    role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
-    }
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+
+    verificationToken: String,
+    verificationTokenExpires: Date,
+
+  passwordResetToken: String,
+  passwordResetExpires: Date,
   },
   { timestamps: true }
 );
