@@ -45,6 +45,47 @@
 #         fi
 
 
+# name: Deploy Express App
+# on:
+#   push:
+#     branches: [dev]
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/checkout@v3
+    
+#     - name: Setup SSH
+#       run: |
+#         echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/key
+#         chmod 600 /tmp/key
+        
+#     - name: Deploy
+#       run: |
+#         ssh -p 22222 -i ~/.ssh/vps_key \
+#             -o StrictHostKeyChecking=no \
+#             -o ConnectTimeout=30 \
+#             gsas-admin@${{ secrets.VPS_IP }} "
+#           # Go to project
+#           cd /srv/jimmystickmanbackend
+          
+#           # Update code
+#           git pull origin dev
+          
+#           # Install dependencies
+#           npm install --production
+          
+#           # Set environment
+#           [ -f .env.dev ] && cp .env.dev .env
+          
+#           # Restart app
+#           pm2 restart jimmystickman-express-dev 2>/dev/null || \
+#           pm2 start npm --name 'jimmystickman-express-dev' -- start
+          
+#           echo '✅ Express app deployed!'
+#         "
+
 name: Deploy Express App
 on:
   push:
@@ -56,32 +97,18 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Setup SSH
-      run: |
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/key
-        chmod 600 /tmp/key
-        
-    - name: Deploy
-      run: |
-        ssh -p 22222 -i ~/.ssh/vps_key \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=30 \
-            gsas-admin@${{ secrets.VPS_IP }} "
-          # Go to project
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.VPS_IP }}
+        port: 22222
+        username: gsas-admin
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
           cd /srv/jimmystickmanbackend
-          
-          # Update code
           git pull origin dev
-          
-          # Install dependencies
           npm install --production
-          
-          # Set environment
           [ -f .env.dev ] && cp .env.dev .env
-          
-          # Restart app
           pm2 restart jimmystickman-express-dev 2>/dev/null || \
           pm2 start npm --name 'jimmystickman-express-dev' -- start
-          
           echo '✅ Express app deployed!'
-        "
