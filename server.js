@@ -21,16 +21,6 @@ dotenv.config();
 // ---------------- APP INIT (MUST COME FIRST) ----------------
 const app = express();
 
-// ---------------- REQUEST LOGGER ----------------
-app.use((req, res, next) => {
-  console.log("➡️ Incoming request:", {
-    method: req.method,
-    url: req.originalUrl,
-    body: req.body,
-    cookies: req.cookies,
-  });
-  next();
-});
 
 // ---------------- CORS ----------------
 const allowedOrigins = process.env.CORS_ORIGINS
@@ -55,6 +45,18 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ---------------- REQUEST LOGGER ----------------
+app.use((req, res, next) => {
+  console.log("➡️ Incoming request:", {
+    method: req.method,
+    url: req.originalUrl,
+    body: req.body,
+    cookies: req.cookies,
+  });
+  next();
+});
+
 
 // ---------------- STATIC ----------------
 const __filename = fileURLToPath(import.meta.url);
