@@ -1,0 +1,233 @@
+# name: Deploy to VPS
+
+# on:
+#   push:
+#     branches:
+#       - dev
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v2
+
+#     - name: Set up SSH
+#       uses: webfactory/ssh-agent@v0.5.3
+#       with:
+#         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+#     - name: Add VPS to known_hosts
+#       run: |
+#         ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+#      # Step to install dependencies and run linting
+#     - name: Install dependencies and run lint
+#       run: |
+#        npm ci
+#       #  yarn lint
+
+#     - name: Deploy to VPS
+#       run: |
+#         if [ "${{ github.ref_name }}" == "dev" ]; then
+#           ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#             cd /srv/jimmystickmanbackend &&
+#             git fetch --all &&
+#             git reset --hard origin/dev &&  # Ensure you're pulling the latest changes
+#             npm install &&
+#             cp .env.dev .env && # Use dev environment variables
+#             npm run build:dev &&  # Build the project for development
+#             export NODE_ENV=development &&  # Set NODE_ENV explicitly to development
+#             export $(grep -v '^#' .env | xargs) &&  # Load environment variables from .env
+#             /usr/local/bin/pm2 restart jimmystickman-express-dev
+#           "
+#         fi
+
+
+# name: Deploy Express App
+# on:
+#   push:
+#     branches: [dev]
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/checkout@v3
+    
+#     - name: Setup SSH
+#       run: |
+#         echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/key
+#         chmod 600 /tmp/key
+        
+#     - name: Deploy
+#       run: |
+#         ssh -p 22222 -i ~/.ssh/vps_key \
+#             -o StrictHostKeyChecking=no \
+#             -o ConnectTimeout=30 \
+#             gsas-admin@${{ secrets.VPS_IP }} "
+#           # Go to project
+#           cd /srv/jimmystickmanbackend
+          
+#           # Update code
+#           git pull origin dev
+          
+#           # Install dependencies
+#           npm install --production
+          
+#           # Set environment
+#           [ -f .env.dev ] && cp .env.dev .env
+          
+#           # Restart app
+#           pm2 restart jimmystickman-express-dev 2>/dev/null || \
+#           pm2 start npm --name 'jimmystickman-express-dev' -- start
+          
+#           echo '✅ Express app deployed!'
+#         "
+
+# name: Deploy Express App
+# on:
+#   push:
+#     branches: [dev]
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/checkout@v3
+    
+#     - name: Deploy to VPS
+#       uses: appleboy/ssh-action@v0.1.5
+#       with:
+#         host: ${{ secrets.VPS_IP }}
+#         port: 22222
+#         username: gsas-admin
+#         key: ${{ secrets.SSH_PRIVATE_KEY }}
+#         script: |
+#           cd /srv/jimmystickmanbackend
+#           git pull origin dev
+#           npm install --production
+#           [ -f .env.dev ] && cp .env.dev .env
+#           pm2 restart jimmystickman-express-dev 2>/dev/null || \
+#           pm2 start npm --name 'jimmystickman-express-dev' -- start
+#           echo '✅ Express app deployed!'
+
+name: Deploy to VPS
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.5
+        with:
+          host: ${{ secrets.VPS_IP }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e  # Exit on any error
+            
+            echo "🚀 Starting deployment..."
+            
+            # =================================================================
+            # CRITICAL FIX: Ensure node is in PATH
+            # =================================================================
+            sudo ln -sf "/home/admin-gsas/.nvm/versions/node/v24.13.0/bin/node" /usr/bin/node 2>/dev/null || true
+            sudo ln -sf "/home/admin-gsas/.nvm/versions/node/v24.13.0/bin/node" /usr/local/bin/node 2>/dev/null || true
+            export PATH="/home/admin-gsas/.nvm/versions/node/v24.13.0/bin:$PATH"
+            # =================================================================
+            
+            # Configuration
+            APP_NAME="jimmystickman-backend"
+            APP_DIR="/srv/$APP_NAME"
+            BACKUP_DIR="/home/admin-gsas/backups"
+            
+            # Create backup directory
+            mkdir -p "$BACKUP_DIR"
+            
+            # Navigate to app directory
+            cd "$APP_DIR"
+            echo "Working directory: $(pwd)"
+            
+            # Backup current version
+            echo "📦 Creating backup..."
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            tar czf "$BACKUP_DIR/${APP_NAME}_backup_$TIMESTAMP.tar.gz" . 2>/dev/null || echo "No files to backup"
+            
+            # Update code from GitHub
+            echo "⬇️ Pulling latest code..."
+            if [ -d ".git" ]; then
+              git fetch origin
+              git reset --hard origin/main
+              echo "✅ Code updated successfully"
+            else
+              echo "First deployment - initializing git..."
+              git init
+              git remote add origin https://github.com/${{ github.repository }}.git
+              git fetch origin
+              git reset --hard origin/main
+            fi
+            
+            # Restore .env file from backup if needed
+            # if [ ! -f ".env" ] && [ -f "$BACKUP_DIR/${APP_NAME}_backup_$TIMESTAMP.tar.gz" ]; then
+            #   echo "🔧 Restoring .env from backup..."
+            #   tar -xzf "$BACKUP_DIR/${APP_NAME}_backup_$TIMESTAMP.tar.gz" .env 2>/dev/null || echo "No .env in backup"
+            # fi
+            
+            # Install dependencies
+            echo "📦 Installing dependencies..."
+            
+            # Check if package-lock.json exists
+            if [ ! -f "package-lock.json" ]; then
+              echo "⚠️ package-lock.json not found. Generating it..."
+              rm -rf node_modules
+              npm install --package-lock-only --omit=dev
+            fi
+            
+            # Clean install with existing package-lock.json
+            rm -rf node_modules
+            npm ci --omit=dev --audit
+            
+            echo "✅ Dependencies installed"
+            
+            # Setup PM2 process manager
+            echo "⚙️ Setting up PM2..."
+            if ! command -v pm2 &> /dev/null; then
+              echo "Installing PM2..."
+              npm install -g pm2
+            fi
+            
+            # Restart application
+            echo "🔄 Restarting application..."
+            
+            # Delete existing process if running
+            pm2 delete "$APP_NAME" 2>/dev/null || echo "No existing process to delete"
+            
+            # Start new process
+            pm2 start npm --name "$APP_NAME" -- run start
+            
+            # Save PM2 configuration
+            pm2 save
+            
+            # Setup PM2 to start on boot
+            echo "🔧 Setting up startup configuration..."
+            pm2 startup 2>/dev/null || echo "PM2 startup already configured"
+            
+            # Cleanup old backups (keep last 5)
+            echo "🧹 Cleaning up old backups..."
+            cd "$BACKUP_DIR"
+            ls -t ${APP_NAME}_backup_*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm -f || echo "No old backups to clean"
+            
+            # Final status
+            echo ""
+            echo "🎉 Deployment completed successfully!"
+            echo ""
+            echo "📊 Application Status:"
+            pm2 status "$APP_NAME"
